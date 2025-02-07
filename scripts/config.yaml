@@ -1,0 +1,38 @@
+
+date_tag: "241213"
+dataset_number: 0
+import_archive_and_save_cfl: false
+retro_undersample_interleave: false # retrospective undersampling experiment
+
+save_dicoms: true
+save_echo_images: true
+save_coils: false
+save_figures: true
+do_pad_images_xy: false
+
+base_path: null
+data_info_filename: "./data_info.json"
+
+eddy_ss: true # if eddy currents are stabilized for all echoes
+echoes_to_use: 7
+
+do_sense_multislice: true
+do_espirit: true
+espirit_crop: 0.8
+espirit_thresh: 0.04
+N_acs: 32
+R_eff: 4
+max_iter_calib: 20
+max_iter_unalias: 50
+lamda_calib: 1e-4
+lamda_unalias: 1e-4
+ls_method: "ConjugateGradient"
+
+polarity_index: null
+do_sort_bipolar_data: true
+do_sense_subspace: true
+do_hamming_filter: true
+
+# CS undersampling experiment
+do_undersample_prospective: false
+dataset_index: 1
