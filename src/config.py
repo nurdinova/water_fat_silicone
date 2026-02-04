@@ -29,10 +29,9 @@ def load_parameters(is_jupyter, config_filename="config.yaml"):
 
     if not is_jupyter:
         parser = argparse.ArgumentParser(
-            description="Reconstruction for Water-Fat-Silicone separation"
+            description="Reconstruction of Multi-Echo data for Water-Fat-Silicone imaging"
         )
 
-        # Core dataset / path parameters
         parser.add_argument("--date_tag", type=str, default=params["date_tag"])
         parser.add_argument("--dataset_number", type=int, default=params["dataset_number"],
                             help="Dataset index within the specified date.")
@@ -41,14 +40,12 @@ def load_parameters(is_jupyter, config_filename="config.yaml"):
         parser.add_argument("--data_info_filename", type=str, default=params["data_info_filename"],
                             help="Name of .json with scan data info.")
 
-        # Reconstruction options
         parser.add_argument("--R_eff", type=int, default=params["R_eff"],
                             help="Acceleration of each data interleave.")
         parser.add_argument("--do_sense_subspace", action="store_true",
                             default=params["do_sense_subspace"],
                             help="Do joint WFS reconstruction.")
         
-        # ESPIRiT calibration
         parser.add_argument("--N_acs", type=int, default=params["N_acs"],
                             help="ACS width for ESPIRiT calibration")
         parser.add_argument("--espirit_crop", type=float, default=params["espirit_crop"],
@@ -58,7 +55,6 @@ def load_parameters(is_jupyter, config_filename="config.yaml"):
         parser.add_argument("--max_iter_calib", type=int, default=params["max_iter_calib"],
                             help="Max iterations for ESPIRiT calibration")
 
-        # Unaliasing / reconstruction
         parser.add_argument("--max_iter_unalias", type=int, default=params["max_iter_unalias"],
                             help="Max iterations for unaliasing reconstruction")
         parser.add_argument("--lamda_calib", type=float, default=params["lamda_calib"],
@@ -66,22 +62,19 @@ def load_parameters(is_jupyter, config_filename="config.yaml"):
         parser.add_argument("--lamda_unalias", type=float, default=params["lamda_unalias"],
                             help="Unaliasing regularization")
 
-        # Data handling
         parser.add_argument("--polarity_index", type=int, default=params.get("polarity_index", None),
-                            help="Index of polarity dimension (if present)")
+                            help="Index of polarity to recon. If None, polarities are combined.")
         parser.add_argument("--do_sort_bipolar_data", action="store_true",
                             default=params["do_sort_bipolar_data"],
                             help="Sort bipolar interleaves")
 
-        # Filtering
         parser.add_argument("--do_filter_recon", action="store_true",
                             default=params["do_filter_recon"],
-                            help="Apply post-reconstruction filtering")
+                            help="Apply k-space filtering before recon")
 
-        # Constraints
         parser.add_argument("--lamda_sparsity", type=float, nargs=3,
                             default=params.get("lamda_sparsity", [0., 0., 0.]),
-                            help="Sparsity weights [water fat silicone]")
+                            help="Sparsity regul params [water fat silicone]")
         parser.add_argument("--do_constrain_ngc", action="store_true",
                             default=params.get("do_constrain_ngc", False),
                             help=("Nyquist ghost phase is estimated as phase difference "
@@ -89,9 +82,10 @@ def load_parameters(is_jupyter, config_filename="config.yaml"):
         parser.add_argument("--sparsity_domain", type=str,
                             default=params.get("sparsity_domain", "wavelet"),
                             help="wavelet | tv | identity | mixed")
-
-        parser.add_argument("--slices_to_process", type=int, nargs="*", default=None,
-                            help="Slice indices to process (e.g. --slices_to_process 0 1 2 3)")
+        
+        parser.add_argument("--slices_to_process", type=int, nargs=2, default=None, 
+                            metavar=("START", "END"), 
+                            help="Slice range to process (e.g. --slices_to_process 10 15)")
 
         args = parser.parse_args()
         params.update(vars(args))

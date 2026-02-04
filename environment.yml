@@ -1,0 +1,14 @@
+
+name: wfs_recon
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pip:
+      - cupy-cuda11x
+      - pyyaml
+      - matplotlib
+      - sigpy
+      - git+https://github.com/BMRRgroup/fieldmapping-hmrGC

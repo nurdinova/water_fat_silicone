@@ -1,7 +1,7 @@
 date_tag: "250923"
 dataset_number: 0
 
-base_path: "/home/sdkuser/saved_data/"
+base_path: "/dataNAS/people/nurdaiza/saved_data/"
 data_info_filename: "./data_info.json"
 
 # Reconstruction control
@@ -15,14 +15,14 @@ do_constrain_ngc: false
 sparsity_domain: "wavelet"
 
 # Slice / echo selection
-slices_to_process: null     # null → use all slices
+slices_to_process: [10, 13]     # begin and end indices
 echoes_to_use: 7
 
 # ESPIRiT calibration
 N_acs: 32
-espirit_crop: 0.8
-espirit_thresh: 0.04
-max_iter_calib: 50
+espirit_crop: 0.7
+espirit_thresh: 0.05
+max_iter_calib: 20
 
 # Unaliasing / reconstruction
 max_iter_unalias: 20

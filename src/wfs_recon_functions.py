@@ -5,7 +5,7 @@ import sigpy.mri as mr
 from cupyx.scipy.ndimage import shift as ndimage_shift
 from hmrGC.dixon_imaging import MultiEcho
 from sigpy import backend
-from utils_an import Diag_custom, estimate_weights
+from .utils import estimate_weights
 
 
 def _build_sparsity_prox(x_shape, lamda_sparsity, sparsity_domain, device, diag_operator=None):
@@ -92,6 +92,94 @@ def _build_sparsity_prox(x_shape, lamda_sparsity, sparsity_domain, device, diag_
 
     raise ValueError(f"Unknown sparsity_domain: {sparsity_domain}")
 
+
+class Diag_custom(sp.linop.Linop):
+    """ Define Diagonally stack linear operators to allow for iaxis and oaxis=None.
+
+    Create a Linop that splits input, applies linops independently,
+    and concatenates outputs.
+    In matrix form, given matrices {A1, ..., An}, returns diag([A1, ..., An]).
+
+    Args:
+        linops (list of Linops): list of linops with the same input and
+            output shape.
+        iaxis (int or None): If None, inputs are vectorized
+            and concatenated.
+        oaxis (int or None): If None, outputs are vectorized
+            and concatenated.
+
+    """
+    def __init__(self, linops, oaxis=None, iaxis=None):
+        self.nops = len(linops)
+
+        self.linops = linops
+        self.oaxis = oaxis
+        self.iaxis = iaxis
+        ishape, self.iindices = _hstack_params(
+            [linop.ishape for linop in self.linops], iaxis
+        )
+        oshape, self.oindices = _vstack_params(
+            [linop.oshape for linop in self.linops], oaxis
+        )
+
+        super().__init__(oshape, ishape)
+
+
+    def _apply(self, input):
+        device = backend.get_device(input)
+        xp = device.xp
+        with device:
+            output = xp.empty(self.oshape, dtype=input.dtype)
+            for n, linop in enumerate(self.linops):
+                if n == 0:
+                    istart = 0
+                    ostart = 0
+                else:
+                    istart = self.iindices[n - 1]
+                    ostart = self.oindices[n - 1]
+
+                if n == self.nops - 1:
+                    iend = None
+                    oend = None
+                else:
+                    iend = self.iindices[n]
+                    oend = self.oindices[n]
+
+                if self.iaxis is None:
+                    output_n = linop(
+                        input[istart:iend].reshape(linop.ishape)
+                    )
+                else:
+                    ndim = len(linop.ishape)
+                    axis = self.iaxis % ndim
+                    islc = tuple(
+                        [slice(None)] * axis
+                        + [slice(istart, iend)]
+                        + [slice(None)] * (ndim - axis - 1)
+                    )
+
+                    output_n = linop(input[islc])
+
+                if self.oaxis is None:
+                    output[ostart:oend] = output_n.ravel()
+                else:
+                    ndim = len(linop.oshape)
+                    axis = self.oaxis % ndim
+                    oslc = tuple(
+                        [slice(None)] * axis
+                        + [slice(ostart, oend)]
+                        + [slice(None)] * (ndim - axis - 1)
+                    )
+
+                    output[oslc] = output_n
+
+            return output
+        
+    def _adjoint_linop(self):
+        return Diag_custom(
+            [op.H for op in self.linops], oaxis=self.iaxis, iaxis=self.oaxis
+        )
+    
 
 class L1WaveletRecon_WFS(sp.app.LinearLeastSquares):
     def __init__(self, ksp_cxyt, sens_cxyt, weights=None, fieldmap_xy_Hz=None, te_ms=None, cse_matrix_ts=None,
@@ -689,7 +777,7 @@ class LambdaLinop(sp.linop.Linop):
     """
 
     def __init__(self, ishape, oshape, A, AH, dtype=np.complex64):
-        super().__init__(ishape, oshape, dtype=dtype)
+        super().__init__(ishape, oshape)
         self._A = A
         self._AH = AH
 
@@ -698,7 +786,7 @@ class LambdaLinop(sp.linop.Linop):
 
     def _adjoint_linop(self):
         return LambdaLinop(ishape=self.oshape, oshape=self.ishape,
-                            A=self._AH, AH=self._A, dtype=self.dtype)
+                            A=self._AH, AH=self._A)
 
 
 def ShiftLinop(shape, shift, **kwargs):
@@ -742,4 +830,5 @@ def ShiftLinop(shape, shift, **kwargs):
     dtype = kwargs.get("dtype", np.complex64)
 
     return LambdaLinop(ishape=shape, oshape=shape, A=forward,
-                        AH=adjoint, dtype=dtype)
+                        AH=adjoint)
+
